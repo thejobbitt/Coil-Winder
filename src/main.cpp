@@ -27,7 +27,9 @@ int L = 40; // lenght
 int state = 0;
 int EN = 12;
 String message;
-int QTY, numMessages, endBytes;
+int QTY = 0;
+int numMessages = 0;
+int endBytes = 0;
 byte inByte;
 int flag = 0;
 int count = 0;
@@ -35,7 +37,7 @@ int count = 0;
 void setup(){ 
   pinMode(EN,OUTPUT);
   digitalWrite(EN,HIGH);
-  numMessages, endBytes = 0;
+  
   Serial.begin(9600);
   mySerial.begin(9600);
   stepperX.begin(250, MICROSTEPS);
