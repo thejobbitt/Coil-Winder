@@ -4,28 +4,31 @@
 #include "SyncDriver.h"
 #include <SoftwareSerial.h>
 
-#define SERIAL_RX 2
-#define SERIAL_TX 3
+// Screen Pins
+#define SERIAL_RX       2
+#define SERIAL_TX       3
+// Stepper Pins
+#define DIRECTION_X_PIN 14
+#define STEP_X_PIN      15
+#define DIRECTION_Y_PIN 16
+#define STEP_Y_PIN      17
+// IO Pins
+#define ENABLE_PIN 12
 
-#define DIR_X       14
-#define STEP_X      15
-#define DIR_Y       16
-#define STEP_Y      17
+// General Defines
 #define MICROSTEPS  16
 #define MOTOR_STEPS 200
-
-BasicStepperDriver stepperX(MOTOR_STEPS, DIR_X, STEP_X);
-BasicStepperDriver stepperY(MOTOR_STEPS, DIR_Y, STEP_Y);
+// Objects
+SoftwareSerial hmiScreen(SERIAL_RX, SERIAL_TX);
+BasicStepperDriver stepperX(MOTOR_STEPS, DIRECTION_X_PIN, STEP_X_PIN);
+BasicStepperDriver stepperY(MOTOR_STEPS, DIRECTION_Y_PIN, STEP_Y_PIN);
 SyncDriver controller(stepperX, stepperY);
-
-SoftwareSerial mySerial(SERIAL_RX, SERIAL_TX);
-
+// variables
 int A = 0;  // wire dia
 int B = 0;  // coil width
 int C = 0;  // number of turns
 int L = 40; // lenght
 int state = 0;
-int EN = 12;
 String message;
 int QTY = 0;
 int numMessages = 0;
@@ -35,13 +38,17 @@ int flag = 0;
 int count = 0;
 
 void setup(){ 
-  pinMode(EN,OUTPUT);
-  digitalWrite(EN,HIGH);
-  
+// Serial Terminal  
   Serial.begin(9600);
-  mySerial.begin(9600);
+// Screen Start
+  hmiScreen.begin(9600);
+// Stepper Start
   stepperX.begin(250, MICROSTEPS);
   stepperY.begin(250, MICROSTEPS);
+// Setup Pins
+  pinMode(ENABLE_PIN, OUTPUT);
+  digitalWrite(ENABLE_PIN, HIGH);
+// what is this delay for?
   delay(500);
 }
 
@@ -54,7 +61,6 @@ void data() {
       state = 1;
     }
   }
-
   if (state == 1){
     if(numMessages == 1){ //Did we receive the anticipated number of messages? In this case we only want to receive 1 message.
       B = QTY;
@@ -63,7 +69,6 @@ void data() {
       state = 2;
     }
   }
-
   if(state == 2){
     if (numMessages == 1){ //Did we receive the anticipated number of messages? In this case we only want to receive 1 message.
       C = QTY;
@@ -73,8 +78,8 @@ void data() {
     }
   }
     
-  if (mySerial.available()) { //Is data coming through the serial from the Nextion?
-    inByte = mySerial.read();
+  if (hmiScreen.available()) { //Is data coming through the serial from the Nextion?
+    inByte = hmiScreen.read();
 
     // Serial.println(inByte); //See the data as it comes in
 
@@ -95,21 +100,25 @@ void data() {
   }
 }
 
+void updateScreen(int count){
+  hmiScreen.print("n2.val=");
+  hmiScreen.print(count);
+  hmiScreen.write(0xff);
+  hmiScreen.write(0xff);
+  hmiScreen.write(0xff);
+}
+
 void loop(){
   data();
   if (A > 0 && B > 0 && C > 0) {
-    digitalWrite(EN,LOW);
+    digitalWrite(ENABLE_PIN, LOW);
     if (count <= C){
       for (int i = 0; i <= L; i++){
         if (count > C){
           break;
         }
         controller.rotate(360,40);
-        mySerial.print("n2.val=");
-        mySerial.print(count);
-        mySerial.write(0xff);
-        mySerial.write(0xff);
-        mySerial.write(0xff);
+        updateScreen(count);
         count++;  
       }
 
@@ -118,11 +127,7 @@ void loop(){
           break;
         }
         controller.rotate(360,-40);  
-        mySerial.print("n2.val=");
-        mySerial.print(count);
-        mySerial.write(0xff);
-        mySerial.write(0xff);
-        mySerial.write(0xff);
+        updateScreen(count);
         count++;
       }
     }   
